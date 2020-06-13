@@ -2,15 +2,6 @@ package filutils
 
 import (
 	"golang.org/x/xerrors"
-
-	"github.com/filecoin-project/go-address"
-	"github.com/filecoin-project/specs-actors/actors/crypto"
-
-	_ "github.com/filecoin-project/lotus/lib/sigs/bls"
-	_ "github.com/filecoin-project/lotus/lib/sigs/secp"
-
-	"github.com/filecoin-project/lotus/chain/types"
-	"github.com/filecoin-project/lotus/lib/sigs"
 )
 
 const (
@@ -20,34 +11,53 @@ const (
 	KTSecp256k1 = "secp256k1"
 )
 
+// KeyInfo is used for storing keys in KeyStore
+type KeyInfo struct {
+	Type       string
+	PrivateKey []byte
+}
+
 // Key struct
 type Key struct {
-	types.KeyInfo
+	KeyInfo
 
 	PublicKey []byte
-	Address   address.Address
+	Address   Address
+}
+
+// GenerateKey func
+func GenerateKey(typ SigType) (*Key, error) {
+	pk, err := Generate(typ)
+	if err != nil {
+		return nil, err
+	}
+	ki := KeyInfo{
+		Type:       kstoreSigType(typ),
+		PrivateKey: pk,
+	}
+	return NewKey(ki)
 }
 
 // NewKey func
-func NewKey(keyinfo types.KeyInfo) (*Key, error) {
+func NewKey(keyinfo KeyInfo) (*Key, error) {
 	k := &Key{
 		KeyInfo: keyinfo,
 	}
 
 	var err error
-	k.PublicKey, err = sigs.ToPublic(ActSigType(k.Type), k.PrivateKey)
+	k.PublicKey, err = ToPublic(ActSigType(k.Type), k.PrivateKey)
 	if err != nil {
 		return nil, err
 	}
 
 	switch k.Type {
 	case KTSecp256k1:
-		k.Address, err = address.NewSecp256k1Address(k.PublicKey)
+		k.Address, err = NewSecp256k1Address(k.PublicKey)
 		if err != nil {
 			return nil, xerrors.Errorf("converting Secp256k1 to address: %w", err)
 		}
 	case KTBLS:
-		k.Address, err = address.NewBLSAddress(k.PublicKey)
+		k.Address, err = NewBLSAddress(k.PublicKey)
 		if err != nil {
 			return nil, xerrors.Errorf("converting BLS to address: %w", err)
 		}
@@ -58,13 +68,24 @@ func NewKey(keyinfo types.KeyInfo) (*Key, error) {
 
 }
 
+func kstoreSigType(typ SigType) string {
+	switch typ {
+	case SigTypeBLS:
+		return KTBLS
+	case SigTypeSecp256k1:
+		return KTSecp256k1
+	default:
+		return ""
+	}
+}
+
 // ActSigType func
-func ActSigType(typ string) crypto.SigType {
+func ActSigType(typ string) SigType {
 	switch typ {
 	case KTBLS:
-		return crypto.SigTypeBLS
+		return SigTypeBLS
 	case KTSecp256k1:
-		return crypto.SigTypeSecp256k1
+		return SigTypeSecp256k1
 	default:
 		return 0
 	}
