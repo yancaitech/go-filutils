@@ -29,14 +29,32 @@ type Key struct {
 	Address   Address
 }
 
+// WalletSerializeResult struct
 type WalletSerializeResult struct {
 	KeyInfo []*KeyInfo
 }
 
-// LoadKey func
-func LoadKey(data string) (*Key, error) {
+// DumpPrivateKey func
+func (k *Key) DumpPrivateKey() (prik string, err error) {
+	prik = hex.EncodeToString(k.PrivateKey)
+	return prik, err
+}
+
+// LoadFromPrivateKey func
+func LoadFromPrivateKey(prik string) (key *Key, err error) {
 	var ki KeyInfo
-	bs, err := hex.DecodeString(strings.TrimSpace(data))
+	ki.Type = KTSecp256k1
+	ki.PrivateKey, err = hex.DecodeString(prik)
+	if err != nil {
+		return nil, err
+	}
+	return NewKey(ki)
+}
+
+// LoadKeyInfo func
+func LoadKeyInfo(info string) (*Key, error) {
+	var ki KeyInfo
+	bs, err := hex.DecodeString(strings.TrimSpace(info))
 	if err != nil {
 		return nil, err
 	}
@@ -46,9 +64,17 @@ func LoadKey(data string) (*Key, error) {
 	return NewKey(ki)
 }
 
-// DumpKey func
-func (k *Key) DumpKey() (prikey []byte, err error) {
-	return k.PrivateKey, nil
+// DumpKeyInfo func
+func (k *Key) DumpKeyInfo() (info string, err error) {
+	var ki KeyInfo
+	ki.Type = k.Type
+	ki.PrivateKey = k.PrivateKey
+	bs, err := json.Marshal(ki)
+	if err != nil {
+		return "", err
+	}
+	info = hex.EncodeToString(bs)
+	return info, nil
 }
 
 // GenerateKey func
