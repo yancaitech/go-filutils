@@ -32,7 +32,8 @@ type Tx struct {
 }
 
 // CreateTransaction func
-func CreateTransaction(fromAddr string, toAddr string, val Int, gp Int, nonce uint64) (raw string, err error) {
+func CreateTransaction(fromAddr string, toAddr string, val Int, gl int64, gp Int, nonce uint64,
+	method uint64, params []byte) (raw string, err error) {
 	var fa Address
 	err = fa.Scan(fromAddr)
 	if err != nil {
@@ -46,11 +47,13 @@ func CreateTransaction(fromAddr string, toAddr string, val Int, gp Int, nonce ui
 	tx := &Tx{
 		From:     fa,
 		To:       ta,
+		Nonce:    nonce,
 		Value:    val,
-		GasLimit: 10000,
+		GasLimit: gl,
 		GasPrice: gp,
+		Method:   method,
+		Params:   params,
 	}
-	tx.Nonce = nonce
 	bs, err := tx.Serialize()
 	if err != nil {
 		return "", err
