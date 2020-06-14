@@ -8,8 +8,8 @@ import (
 	"fmt"
 	"strconv"
 
-	"github.com/minio/blake2b-simd"
 	"github.com/multiformats/go-varint"
+	"golang.org/x/crypto/blake2b"
 	"golang.org/x/xerrors"
 )
 
@@ -45,9 +45,6 @@ const BlsPublicKeyBytes = 48
 
 // BlsPrivateKeyBytes is the length of a BLS private key
 const BlsPrivateKeyBytes = 32
-
-var payloadHashConfig = &blake2b.Config{Size: PayloadHashLength}
-var checksumHashConfig = &blake2b.Config{Size: ChecksumHashLength}
 
 const encodeStd = "abcdefghijklmnopqrstuvwxyz234567"
 
@@ -200,7 +197,7 @@ func NewFromBytes(addr []byte) (Address, error) {
 
 // Checksum returns the checksum of `ingest`.
 func Checksum(ingest []byte) []byte {
-	return hash(ingest, checksumHashConfig)
+	return hash(ingest, ChecksumHashLength)
 }
 
 // ValidateChecksum returns true if the checksum of `ingest` is equal to `expected`>
@@ -210,7 +207,7 @@ func ValidateChecksum(ingest, expect []byte) bool {
 }
 
 func addressHash(ingest []byte) []byte {
-	return hash(ingest, payloadHashConfig)
+	return hash(ingest, PayloadHashLength)
 }
 
 func newAddress(protocol Protocol, payload []byte) (Address, error) {
@@ -340,17 +337,17 @@ func decode(a string) (Address, error) {
 	return newAddress(protocol, payload)
 }
 
-func hash(ingest []byte, cfg *blake2b.Config) []byte {
-	hasher, err := blake2b.New(cfg)
+func hash(ingest []byte, cfg int) []byte {
+	hasher, err := blake2b.New(cfg, ingest)
 	if err != nil {
 		// If this happens sth is very wrong.
 		panic(fmt.Sprintf("invalid address hash configuration: %v", err)) // ok
 	}
-	if _, err := hasher.Write(ingest); err != nil {
-		// blake2bs Write implementation never returns an error in its current
-		// setup. So if this happens sth went very wrong.
-		panic(fmt.Sprintf("blake2b is unable to process hashes: %v", err)) // ok
-	}
+	// if _, err := hasher.Write(ingest); err != nil {
+	// 	// blake2bs Write implementation never returns an error in its current
+	// 	// setup. So if this happens sth went very wrong.
+	// 	panic(fmt.Sprintf("blake2b is unable to process hashes: %v", err)) // ok
+	// }
 	return hasher.Sum(nil)
 }
 
