@@ -7,7 +7,7 @@ import (
 	"io"
 
 	"github.com/btcsuite/btcd/btcec"
-	"golang.org/x/crypto/blake2b"
+	"github.com/yancaitech/go-ethereum/crypto/blake2b"
 )
 
 // SignatureBytes is the length of a BLS signature
@@ -37,12 +37,12 @@ type Message []byte
 // Digest is a compressed affine
 type Digest [DigestBytes]byte
 
-// Used when generating a private key deterministically
+// PrivateKeyGenSeed Used when generating a private key deterministically
 type PrivateKeyGenSeed [32]byte
 
 type secpSigner struct{}
 
-// GenerateKeyFromSeed generates a new key from the given reader.
+// RGenerateKeyFromSeed generates a new key from the given reader.
 func RGenerateKeyFromSeed(seed io.Reader) ([]byte, error) {
 	key, err := ecdsa.GenerateKey(btcec.S256(), seed)
 	if err != nil {
@@ -58,12 +58,12 @@ func RGenerateKeyFromSeed(seed io.Reader) ([]byte, error) {
 	return privkey, nil
 }
 
-// GenerateKey creates a new key using secure randomness from crypto.rand.
+// RGenerateKey creates a new key using secure randomness from crypto.rand.
 func RGenerateKey() ([]byte, error) {
 	return RGenerateKeyFromSeed(rand.Reader)
 }
 
-func (secpSigner) GenPrivate() ([]byte, error) {
+func GenPrivate() ([]byte, error) {
 	priv, err := RGenerateKey()
 	if err != nil {
 		return nil, err
@@ -71,7 +71,7 @@ func (secpSigner) GenPrivate() ([]byte, error) {
 	return priv, nil
 }
 
-func (secpSigner) ToPublic(pk []byte) ([]byte, error) {
+func ToPublic(pk []byte) ([]byte, error) {
 	_, pubk := btcec.PrivKeyFromBytes(btcec.S256(), pk)
 	return pubk.SerializeUncompressed(), nil
 	/*
@@ -80,7 +80,7 @@ func (secpSigner) ToPublic(pk []byte) ([]byte, error) {
 	*/
 }
 
-func (secpSigner) Sign(pk []byte, msg []byte) ([]byte, error) {
+func Sign(pk []byte, msg []byte) ([]byte, error) {
 	b2sum := blake2b.Sum256(msg)
 	prik, _ := btcec.PrivKeyFromBytes(btcec.S256(), pk)
 	s, err := prik.Sign(b2sum[:])
@@ -90,7 +90,7 @@ func (secpSigner) Sign(pk []byte, msg []byte) ([]byte, error) {
 	return s.Serialize(), nil
 }
 
-func (secpSigner) Verify(sig []byte, a Address, msg []byte) error {
+func Verify(sig []byte, a Address, msg []byte) error {
 	b2sum := blake2b.Sum256(msg)
 	s, err := btcec.ParseSignature(sig, btcec.S256())
 	if err != nil {

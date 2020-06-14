@@ -3,9 +3,8 @@ package filutils
 import (
 	"encoding/hex"
 	"encoding/json"
+	"errors"
 	"strings"
-
-	"golang.org/x/xerrors"
 )
 
 const (
@@ -24,14 +23,8 @@ type KeyInfo struct {
 // Key struct
 type Key struct {
 	KeyInfo
-
 	PublicKey []byte
 	Address   Address
-}
-
-// WalletSerializeResult struct
-type WalletSerializeResult struct {
-	KeyInfo []*KeyInfo
 }
 
 // DumpPrivateKey func
@@ -78,13 +71,13 @@ func (k *Key) DumpKeyInfo() (info string, err error) {
 }
 
 // GenerateKey func
-func GenerateKey(typ SigType) (*Key, error) {
-	pk, err := Generate(typ)
+func GenerateKey() (*Key, error) {
+	pk, err := GenPrivate()
 	if err != nil {
 		return nil, err
 	}
 	ki := KeyInfo{
-		Type:       kstoreSigType(typ),
+		Type:       KTSecp256k1,
 		PrivateKey: pk,
 	}
 	return NewKey(ki)
@@ -97,7 +90,7 @@ func NewKey(keyinfo KeyInfo) (*Key, error) {
 	}
 
 	var err error
-	k.PublicKey, err = ToPublic(ActSigType(k.Type), k.PrivateKey)
+	k.PublicKey, err = ToPublic(k.PrivateKey)
 	if err != nil {
 		return nil, err
 	}
@@ -106,39 +99,11 @@ func NewKey(keyinfo KeyInfo) (*Key, error) {
 	case KTSecp256k1:
 		k.Address, err = NewSecp256k1Address(k.PublicKey)
 		if err != nil {
-			return nil, xerrors.Errorf("converting Secp256k1 to address: %w", err)
-		}
-	case KTBLS:
-		k.Address, err = NewBLSAddress(k.PublicKey)
-		if err != nil {
-			return nil, xerrors.Errorf("converting BLS to address: %w", err)
+			return nil, err
 		}
 	default:
-		return nil, xerrors.Errorf("unknown key type")
+		return nil, errors.New("unknown key type")
 	}
 	return k, nil
 
-}
-
-func kstoreSigType(typ SigType) string {
-	switch typ {
-	case SigTypeBLS:
-		return KTBLS
-	case SigTypeSecp256k1:
-		return KTSecp256k1
-	default:
-		return ""
-	}
-}
-
-// ActSigType func
-func ActSigType(typ string) SigType {
-	switch typ {
-	case KTBLS:
-		return SigTypeBLS
-	case KTSecp256k1:
-		return SigTypeSecp256k1
-	default:
-		return 0
-	}
 }

@@ -6,10 +6,12 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"io"
 	"strconv"
 
 	"github.com/multiformats/go-varint"
-	"golang.org/x/crypto/blake2b"
+	cbg "github.com/whyrusleeping/cbor-gen"
+	"github.com/yancaitech/go-ethereum/crypto/blake2b"
 	"golang.org/x/xerrors"
 )
 
@@ -85,16 +87,10 @@ const (
 	Actor
 	// BLS represents the address BLS protocol.
 	BLS
-
-	// Unknown protocol
-	Unknown = Protocol(255)
 )
 
 // Protocol returns the protocol used by the address.
 func (a Address) Protocol() Protocol {
-	if len(a.str) == 0 {
-		return Unknown
-	}
 	return a.str[0]
 }
 
@@ -229,8 +225,6 @@ func newAddress(protocol Protocol, payload []byte) (Address, error) {
 		if len(payload) != BlsPublicKeyBytes {
 			return Undef, ErrInvalidPayload
 		}
-	default:
-		return Undef, ErrUnknownProtocol
 	}
 	explen := 1 + len(payload)
 	buf := make([]byte, explen)
@@ -251,8 +245,6 @@ func encode(network Network, addr Address) (string, error) {
 		ntwk = MainnetPrefix
 	case Testnet:
 		ntwk = TestnetPrefix
-	default:
-		return UndefAddressString, ErrUnknownNetwork
 	}
 
 	var strAddr string
@@ -269,8 +261,6 @@ func encode(network Network, addr Address) (string, error) {
 			return UndefAddressString, xerrors.Errorf("payload contains additional bytes")
 		}
 		strAddr = fmt.Sprintf("%s%d%d", ntwk, addr.Protocol(), i)
-	default:
-		return UndefAddressString, ErrUnknownProtocol
 	}
 	return strAddr, nil
 }
@@ -286,10 +276,6 @@ func decode(a string) (Address, error) {
 		return Undef, ErrInvalidLength
 	}
 
-	if string(a[0]) != MainnetPrefix && string(a[0]) != TestnetPrefix {
-		return Undef, ErrUnknownNetwork
-	}
-
 	var protocol Protocol
 	switch a[1] {
 	case '0':
@@ -300,8 +286,6 @@ func decode(a string) (Address, error) {
 		protocol = Actor
 	case '3':
 		protocol = BLS
-	default:
-		return Undef, ErrUnknownProtocol
 	}
 
 	raw := a[2:]
@@ -366,12 +350,50 @@ func (a *Address) UnmarshalBinary(b []byte) error {
 	return nil
 }
 
-// IDFromAddress func
-func IDFromAddress(addr Address) (uint64, error) {
-	if addr.Protocol() != ID {
-		return 0, xerrors.Errorf("cannot get id from non id address")
+func (a Address) MarshalCBOR(w io.Writer) error {
+	if a == Undef {
+		return fmt.Errorf("cannot marshal undefined address")
 	}
 
-	i, _, err := varint.FromUvarint(addr.Payload())
-	return i, err
+	if err := cbg.WriteMajorTypeHeader(w, cbg.MajByteString, uint64(len(a.str))); err != nil {
+		return err
+	}
+
+	if _, err := io.WriteString(w, a.str); err != nil {
+		return err
+	}
+
+	return nil
+}
+
+func (a *Address) UnmarshalCBOR(br io.Reader) error {
+	maj, extra, err := cbg.CborReadHeader(br)
+	if err != nil {
+		return err
+	}
+
+	if maj != cbg.MajByteString {
+		return fmt.Errorf("cbor type for address unmarshal was not byte string")
+	}
+
+	if extra > 64 {
+		return fmt.Errorf("too many bytes to unmarshal for an address")
+	}
+
+	buf := make([]byte, int(extra))
+	if _, err := io.ReadFull(br, buf); err != nil {
+		return err
+	}
+
+	addr, err := NewFromBytes(buf)
+	if err != nil {
+		return err
+	}
+	if addr == Undef {
+		return fmt.Errorf("cbor input should not contain empty addresses")
+	}
+
+	*a = addr
+
+	return nil
 }
