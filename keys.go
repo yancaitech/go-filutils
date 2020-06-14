@@ -1,6 +1,10 @@
 package filutils
 
 import (
+	"encoding/hex"
+	"encoding/json"
+	"strings"
+
 	"golang.org/x/xerrors"
 )
 
@@ -23,6 +27,28 @@ type Key struct {
 
 	PublicKey []byte
 	Address   Address
+}
+
+type WalletSerializeResult struct {
+	KeyInfo []*KeyInfo
+}
+
+// LoadKey func
+func LoadKey(data string) (*Key, error) {
+	var ki KeyInfo
+	bs, err := hex.DecodeString(strings.TrimSpace(data))
+	if err != nil {
+		return nil, err
+	}
+	if err := json.Unmarshal(bs, &ki); err != nil {
+		return nil, err
+	}
+	return NewKey(ki)
+}
+
+// DumpKey func
+func (k *Key) DumpKey() (prikey []byte, err error) {
+	return k.PrivateKey, nil
 }
 
 // GenerateKey func

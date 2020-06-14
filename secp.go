@@ -72,7 +72,12 @@ func (secpSigner) GenPrivate() ([]byte, error) {
 }
 
 func (secpSigner) ToPublic(pk []byte) ([]byte, error) {
-	return pk, nil
+	_, pubk := btcec.PrivKeyFromBytes(btcec.S256(), pk)
+	return pubk.SerializeUncompressed(), nil
+	/*
+		x, y := btcec.S256().ScalarBaseMult(pk)
+		return elliptic.Marshal(btcec.S256(), x, y), nil
+	*/
 }
 
 func (secpSigner) Sign(pk []byte, msg []byte) ([]byte, error) {

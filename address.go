@@ -338,16 +338,16 @@ func decode(a string) (Address, error) {
 }
 
 func hash(ingest []byte, cfg int) []byte {
-	hasher, err := blake2b.New(cfg, ingest)
+	hasher, err := blake2b.New(cfg, nil)
 	if err != nil {
 		// If this happens sth is very wrong.
 		panic(fmt.Sprintf("invalid address hash configuration: %v", err)) // ok
 	}
-	// if _, err := hasher.Write(ingest); err != nil {
-	// 	// blake2bs Write implementation never returns an error in its current
-	// 	// setup. So if this happens sth went very wrong.
-	// 	panic(fmt.Sprintf("blake2b is unable to process hashes: %v", err)) // ok
-	// }
+	if _, err := hasher.Write(ingest); err != nil {
+		// blake2bs Write implementation never returns an error in its current
+		// setup. So if this happens sth went very wrong.
+		panic(fmt.Sprintf("blake2b is unable to process hashes: %v", err)) // ok
+	}
 	return hasher.Sum(nil)
 }
 
