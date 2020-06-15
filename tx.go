@@ -13,6 +13,9 @@ import (
 	"golang.org/x/xerrors"
 )
 
+// MessageVersion define
+const MessageVersion = 0
+
 // Tx struct
 type Tx struct {
 	Version int64
@@ -60,6 +63,22 @@ func CreateTransaction(fromAddr string, toAddr string, val Int, gl int64, gp Int
 	}
 	raw = hex.EncodeToString(bs)
 	return raw, nil
+}
+
+// DecodeTransaction func
+func DecodeTransaction(raw string) (*Tx, error) {
+	bs, err := hex.DecodeString(raw)
+	if err != nil {
+		return nil, err
+	}
+	var msg Tx
+	if err := msg.UnmarshalCBOR(bytes.NewReader(bs)); err != nil {
+		return nil, err
+	}
+	if msg.Version != MessageVersion {
+		return nil, fmt.Errorf("decoded message had incorrect version (%d)", msg.Version)
+	}
+	return &msg, nil
 }
 
 // ToStorageBlock func
@@ -393,4 +412,32 @@ func (t *SignedMessage) UnmarshalCBOR(r io.Reader) error {
 
 	}
 	return nil
+}
+
+func (t *SignedMessage) Verify(pubk string) error {
+	mcid := t.Message.Cid()
+	sig := t.Signature.Data
+	err := Verify(sig, pubk, mcid.Bytes())
+	return err
+}
+
+// SignMessage func
+func SignMessage(privk string, msg *Tx) (sm *SignedMessage, err error) {
+	pk, err := hex.DecodeString(privk)
+	if err != nil {
+		return nil, err
+	}
+	mcid := msg.Cid()
+	sb, err := Sign(pk, mcid.Bytes())
+	if err != nil {
+		return nil, err
+	}
+	sig := &Signature{
+		Type: SigTypeSecp256k1,
+		Data: sb,
+	}
+	return &SignedMessage{
+		Message:   *msg,
+		Signature: *sig,
+	}, nil
 }

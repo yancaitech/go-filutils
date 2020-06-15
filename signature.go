@@ -3,6 +3,7 @@ package filutils
 import (
 	"fmt"
 	"io"
+	"math"
 
 	cbg "github.com/whyrusleeping/cbor-gen"
 )
@@ -10,6 +11,7 @@ import (
 type SigType int
 
 const (
+	SigTypeUnknown   = SigType(math.MaxUint8)
 	SigTypeSecp256k1 = SigType(iota)
 	SigTypeBLS
 )

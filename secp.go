@@ -3,6 +3,7 @@ package filutils
 import (
 	"crypto/ecdsa"
 	"crypto/rand"
+	"encoding/hex"
 	"errors"
 	"io"
 
@@ -84,25 +85,33 @@ func Sign(pk []byte, msg []byte) ([]byte, error) {
 	b2sum := blake2b.Sum256(msg)
 	prik, _ := btcec.PrivKeyFromBytes(btcec.S256(), pk)
 	s, err := prik.Sign(b2sum[:])
+	//bs, err := btcec.SignCompact(btcec.S256(), prik, b2sum[:], false)
 	if err != nil {
 		return nil, err
 	}
-	return s.Serialize(), nil
+	bs := s.Serialize()
+	return bs, nil
 }
 
-func Verify(sig []byte, a Address, msg []byte) error {
+// Verify func
+func Verify(sig []byte, pubk string, msg []byte) error {
 	b2sum := blake2b.Sum256(msg)
 	s, err := btcec.ParseSignature(sig, btcec.S256())
 	if err != nil {
 		return err
 	}
 
-	pubk, _, err := btcec.RecoverCompact(btcec.S256(), sig, b2sum[:])
+	bs, err := hex.DecodeString(pubk)
+	if err != nil {
+		return err
+	}
+	pkbs, err := btcec.ParsePubKey(bs, btcec.S256())
+	//pkbs, _, err := btcec.RecoverCompact(btcec.S256(), sig, b2sum[:])
 	if err != nil {
 		return err
 	}
 
-	v := s.Verify(b2sum[:], pubk)
+	v := s.Verify(b2sum[:], pkbs)
 	if v == false {
 		return errors.New("Verify signature failed")
 	}
