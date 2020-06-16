@@ -350,6 +350,7 @@ func (a *Address) UnmarshalBinary(b []byte) error {
 	return nil
 }
 
+// MarshalCBOR func
 func (a Address) MarshalCBOR(w io.Writer) error {
 	if a == Undef {
 		return fmt.Errorf("cannot marshal undefined address")
@@ -366,6 +367,7 @@ func (a Address) MarshalCBOR(w io.Writer) error {
 	return nil
 }
 
+// UnmarshalCBOR func
 func (a *Address) UnmarshalCBOR(br io.Reader) error {
 	maj, extra, err := cbg.CborReadHeader(br)
 	if err != nil {

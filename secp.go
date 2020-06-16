@@ -64,6 +64,7 @@ func RGenerateKey() ([]byte, error) {
 	return RGenerateKeyFromSeed(rand.Reader)
 }
 
+// GenPrivate func
 func GenPrivate() ([]byte, error) {
 	priv, err := RGenerateKey()
 	if err != nil {
@@ -72,6 +73,7 @@ func GenPrivate() ([]byte, error) {
 	return priv, nil
 }
 
+// ToPublic from private key
 func ToPublic(pk []byte) ([]byte, error) {
 	_, pubk := btcec.PrivKeyFromBytes(btcec.S256(), pk)
 	return pubk.SerializeUncompressed(), nil
@@ -81,6 +83,7 @@ func ToPublic(pk []byte) ([]byte, error) {
 	*/
 }
 
+// Sign message
 func Sign(pk []byte, msg []byte) ([]byte, error) {
 	b2sum := blake2b.Sum256(msg)
 	prik, _ := btcec.PrivKeyFromBytes(btcec.S256(), pk)
