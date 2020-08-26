@@ -97,6 +97,7 @@ func (s *Signature) UnmarshalCBOR(br io.Reader) error {
 	if _, err = io.ReadFull(br, buf); err != nil {
 		return err
 	}
+	s.Type = SigType(buf[0])
 	s.Data = buf[1:]
 	return nil
 }

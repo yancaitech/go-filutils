@@ -1,0 +1,10 @@
+POST http://127.0.0.1:1234/rpc/v0 HTTP/1.1
+content-type: application/json
+Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJBbGxvdyI6WyJyZWFkIiwid3JpdGUiLCJzaWduIiwiYWRtaW4iXX0.0IWaCXJBHX0BNqPwH35ee401O2s2jup__a04yJ15qnU
+
+{
+    "id": 1,
+    "jsonrpc": "2.0",
+    "method": "Filecoin.WalletList",
+    "params": []
+}

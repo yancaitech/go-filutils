@@ -7,6 +7,8 @@ import (
 	"errors"
 	"io"
 
+	"github.com/yancaitech/go-utils"
+
 	"github.com/btcsuite/btcd/btcec"
 	"github.com/yancaitech/go-ethereum/crypto/blake2b"
 )
@@ -87,18 +89,45 @@ func ToPublic(pk []byte) ([]byte, error) {
 func Sign(pk []byte, msg []byte) ([]byte, error) {
 	b2sum := blake2b.Sum256(msg)
 	prik, _ := btcec.PrivKeyFromBytes(btcec.S256(), pk)
-	s, err := prik.Sign(b2sum[:])
-	//bs, err := btcec.SignCompact(btcec.S256(), prik, b2sum[:], false)
+	rsig, err := btcec.SignCompact(btcec.S256(), prik, b2sum[:], false)
 	if err != nil {
 		return nil, err
 	}
-	bs := s.Serialize()
-	return bs, nil
+	sig := make([]byte, 65)
+	utils.ByteSliceCopy(rsig, 1, sig, 0, 64)
+	sig[64] = (rsig[0] - 27)
+
+	return sig, err
 }
 
 // Verify func
 func Verify(sig []byte, pubk string, msg []byte) error {
+	if len(sig) != 65 {
+		return errors.New("bad signature")
+	}
+	pkbs, err := hex.DecodeString(pubk)
+	if err != nil {
+		return err
+	}
 	b2sum := blake2b.Sum256(msg)
+	rsig := make([]byte, 65)
+	utils.ByteSliceCopy(sig, 0, rsig, 1, 64)
+	rsig[0] = (sig[64] + 27)
+	pbk, b, err := btcec.RecoverCompact(btcec.S256(), rsig[:], b2sum[:])
+	if err != nil {
+		return err
+	}
+	var bs []byte
+	if b == false {
+		bs = pbk.SerializeUncompressed()
+	} else {
+		bs = pbk.SerializeCompressed()
+	}
+	b = utils.ByteSliceEqual(bs, pkbs)
+	if b == false {
+		return errors.New("verify failed")
+	}
+	/* m2
 	s, err := btcec.ParseSignature(sig, btcec.S256())
 	if err != nil {
 		return err
@@ -118,6 +147,7 @@ func Verify(sig []byte, pubk string, msg []byte) error {
 	if v == false {
 		return errors.New("Verify signature failed")
 	}
+	*/
 
 	return nil
 }

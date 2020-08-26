@@ -70,6 +70,11 @@ func (k *Key) DumpKeyInfo() (info string, err error) {
 	return info, nil
 }
 
+// DumpKeyHex func
+func (k *Key) DumpKeyHex() (hx []byte, err error) {
+	return k.KeyInfo.PrivateKey[:], nil
+}
+
 // GenerateKey func
 func GenerateKey() (*Key, error) {
 	pk, err := GenPrivate()
@@ -79,6 +84,15 @@ func GenerateKey() (*Key, error) {
 	ki := KeyInfo{
 		Type:       KTSecp256k1,
 		PrivateKey: pk,
+	}
+	return NewKey(ki)
+}
+
+// LoadKeyFromHex func
+func LoadKeyFromHex(hk []byte) (*Key, error) {
+	ki := KeyInfo{
+		Type:       KTSecp256k1,
+		PrivateKey: hk[:],
 	}
 	return NewKey(ki)
 }

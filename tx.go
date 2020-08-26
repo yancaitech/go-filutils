@@ -359,6 +359,31 @@ type SignedMessage struct {
 	Signature Signature
 }
 
+// Serialize func
+func (t *SignedMessage) Serialize() ([]byte, error) {
+	buf := new(bytes.Buffer)
+	if err := t.MarshalCBOR(buf); err != nil {
+		return nil, err
+	}
+	return buf.Bytes(), nil
+}
+
+// DecodeSignedTransaction func
+func DecodeSignedTransaction(raw string) (*SignedMessage, error) {
+	bs, err := hex.DecodeString(raw)
+	if err != nil {
+		return nil, err
+	}
+	var msg SignedMessage
+	if err := msg.UnmarshalCBOR(bytes.NewReader(bs)); err != nil {
+		return nil, err
+	}
+	if msg.Message.Version != MessageVersion {
+		return nil, fmt.Errorf("decoded message had incorrect version (%d)", msg.Message.Version)
+	}
+	return &msg, nil
+}
+
 // MarshalCBOR func
 func (t *SignedMessage) MarshalCBOR(w io.Writer) error {
 	if t == nil {
@@ -446,4 +471,30 @@ func SignMessage(privk string, msg *Tx) (sm *SignedMessage, err error) {
 		Message:   *msg,
 		Signature: *sig,
 	}, nil
+}
+
+// Cid func
+func (t *SignedMessage) Cid() cid.Cid {
+	sb, err := t.ToStorageBlock()
+	if err != nil {
+		panic(err)
+	}
+
+	return sb.Cid()
+}
+
+// ToStorageBlock func
+func (t *SignedMessage) ToStorageBlock() (block.Block, error) {
+	data, err := t.Serialize()
+	if err != nil {
+		return nil, err
+	}
+
+	pref := cid.NewPrefixV1(cid.DagCBOR, multihash.BLAKE2B_MIN+31)
+	c, err := pref.Sum(data)
+	if err != nil {
+		return nil, err
+	}
+
+	return block.NewBlockWithCid(data, c)
 }
